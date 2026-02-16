@@ -1,17 +1,157 @@
 ---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import ProjectGrid from "@components/ProjectGrid.astro";
+import SearchBar from "@components/SearchBar.astro";
+import FilterBar from "@components/FilterBar.astro";
+import { getCollection } from "astro:content";
 
+const allProjects = await getCollection("projects", ({ data }) => !data.draft);
+const projects = allProjects.sort(
+  (a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime(),
+);
+
+// Extract unique filter values
+const statuses = [...new Set(projects.map((p) => p.data.status))];
+const techStack = [...new Set(projects.flatMap((p) => p.data.techStack))].sort();
+const tags = [...new Set(projects.flatMap((p) => p.data.tags))].sort();
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout
+  title="Project Journal"
+  description="Documenting AI-assisted development projects built with Claude Code."
+>
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+      <h1 class="text-3xl sm:text-4xl font-bold text-text-primary mb-2">
+        Project Journal
+      </h1>
+      <p class="text-lg text-text-secondary">
+        Documenting what works (and what doesn't) when building with Claude Code.
+      </p>
+    </div>
+
+    <div class="space-y-6 mb-8">
+      <SearchBar />
+      <FilterBar statuses={statuses} techStack={techStack} tags={tags} />
+    </div>
+
+    <ProjectGrid projects={projects} />
+  </div>
+</BaseLayout>
+
+<script>
+  import Fuse from "fuse.js";
+
+  interface SearchItem {
+    id: string;
+    title: string;
+    description: string;
+    status: string;
+    difficulty: string;
+    techStack: string[];
+    tags: string[];
+    claudeTechniques: string[];
+  }
+
+  function initSearch() {
+    const searchInput = document.getElementById("search-input") as HTMLInputElement | null;
+    const grid = document.getElementById("project-grid");
+    const noResults = document.getElementById("no-results");
+    const filterPills = document.querySelectorAll<HTMLButtonElement>(".filter-pill");
+
+    if (!searchInput || !grid) return;
+
+    const cards = Array.from(grid.querySelectorAll<HTMLElement>("article"));
+    const activeFilters: Map<string, Set<string>> = new Map();
+
+    // Fuse.js setup
+    let fuse: Fuse<SearchItem> | null = null;
+    let searchData: SearchItem[] = [];
+
+    fetch(import.meta.env.BASE_URL + "search.json")
+      .then((r) => r.json())
+      .then((data: SearchItem[]) => {
+        searchData = data;
+        fuse = new Fuse(data, {
+          keys: ["title", "description", "techStack", "tags", "claudeTechniques"],
+          threshold: 0.3,
+          includeScore: true,
+        });
+      });
+
+    function applyFilters() {
+      const query = searchInput!.value.trim();
+      let matchingIds: Set<string> | null = null;
+
+      // Fuzzy search
+      if (query && fuse) {
+        const results = fuse.search(query);
+        matchingIds = new Set(results.map((r) => r.item.id));
+      }
+
+      let visibleCount = 0;
+
+      cards.forEach((card) => {
+        const status = card.dataset.status || "";
+        const tech = (card.dataset.tech || "").split(",").filter(Boolean);
+        const tags = (card.dataset.tags || "").split(",").filter(Boolean);
+
+        // Check search match
+        const link = card.querySelector("a");
+        const href = link?.getAttribute("href") || "";
+        const slug = href.split("/projects/")[1]?.replace(/\/$/, "") || "";
+        const passesSearch = !matchingIds || matchingIds.has(slug);
+
+        // Check filters
+        let passesFilters = true;
+        for (const [filterType, values] of activeFilters) {
+          if (values.size === 0) continue;
+          if (filterType === "status" && !values.has(status)) passesFilters = false;
+          if (filterType === "tech" && !tech.some((t) => values.has(t))) passesFilters = false;
+          if (filterType === "tag" && !tags.some((t) => values.has(t))) passesFilters = false;
+        }
+
+        const visible = passesSearch && passesFilters;
+        card.style.display = visible ? "" : "none";
+        if (visible) visibleCount++;
+      });
+
+      if (noResults) {
+        noResults.classList.toggle("hidden", visibleCount > 0);
+      }
+    }
+
+    // Search input
+    searchInput.addEventListener("input", () => {
+      applyFilters();
+    });
+
+    // Filter pills
+    filterPills.forEach((pill) => {
+      pill.addEventListener("click", () => {
+        const filterType = pill.dataset.filter!;
+        const value = pill.dataset.value!;
+
+        if (!activeFilters.has(filterType)) {
+          activeFilters.set(filterType, new Set());
+        }
+
+        const values = activeFilters.get(filterType)!;
+        if (values.has(value)) {
+          values.delete(value);
+          pill.classList.remove("border-brand", "text-brand", "bg-brand/10");
+          pill.classList.add("border-border", "text-text-secondary");
+        } else {
+          values.add(value);
+          pill.classList.add("border-brand", "text-brand", "bg-brand/10");
+          pill.classList.remove("border-border", "text-text-secondary");
+        }
+
+        applyFilters();
+      });
+    });
+  }
+
+  initSearch();
+  document.addEventListener("astro:after-swap", initSearch);
+</script>

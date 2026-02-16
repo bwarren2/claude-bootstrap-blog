@@ -1,0 +1,66 @@
+---
+interface Props {
+  statuses: string[];
+  techStack: string[];
+  tags: string[];
+}
+
+const { statuses, techStack, tags } = Astro.props;
+---
+
+<div class="space-y-3">
+  <!-- Status filters -->
+  <div class="flex flex-wrap gap-2">
+    <span class="text-xs font-semibold text-text-secondary uppercase tracking-wider self-center mr-1">Status:</span>
+    {
+      statuses.map((status) => (
+        <button
+          type="button"
+          data-filter="status"
+          data-value={status}
+          class="filter-pill px-3 py-1 rounded-full border border-border text-sm text-text-secondary hover:border-brand hover:text-brand transition-colors cursor-pointer"
+        >
+          {status.charAt(0).toUpperCase() + status.slice(1)}
+        </button>
+      ))
+    }
+  </div>
+
+  <!-- Tech stack filters -->
+  {
+    techStack.length > 0 && (
+      <div class="flex flex-wrap gap-2">
+        <span class="text-xs font-semibold text-text-secondary uppercase tracking-wider self-center mr-1">Tech:</span>
+        {techStack.map((tech) => (
+          <button
+            type="button"
+            data-filter="tech"
+            data-value={tech}
+            class="filter-pill px-3 py-1 rounded-full border border-border text-sm text-text-secondary hover:border-brand hover:text-brand transition-colors cursor-pointer"
+          >
+            {tech}
+          </button>
+        ))}
+      </div>
+    )
+  }
+
+  <!-- Tag filters -->
+  {
+    tags.length > 0 && (
+      <div class="flex flex-wrap gap-2">
+        <span class="text-xs font-semibold text-text-secondary uppercase tracking-wider self-center mr-1">Tags:</span>
+        {tags.map((tag) => (
+          <button
+            type="button"
+            data-filter="tag"
+            data-value={tag}
+            class="filter-pill px-3 py-1 rounded-full border border-border text-sm text-text-secondary hover:border-brand hover:text-brand transition-colors cursor-pointer"
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+    )
+  }
+</div>

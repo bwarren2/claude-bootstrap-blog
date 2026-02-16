@@ -1,0 +1,20 @@
+---
+interface Props {
+  before: string;
+  after: string;
+  language?: string;
+}
+
+const { before, after, language = "" } = Astro.props;
+---
+
+<div class="grid gap-4 md:grid-cols-2">
+  <div>
+    <div class="text-xs font-semibold text-status-abandoned uppercase tracking-wider mb-2">Before</div>
+    <pre class="rounded-lg border border-status-abandoned/30 bg-status-abandoned/5 p-4 text-sm overflow-x-auto"><code>{before}</code></pre>
+  </div>
+  <div>
+    <div class="text-xs font-semibold text-status-complete uppercase tracking-wider mb-2">After</div>
+    <pre class="rounded-lg border border-status-complete/30 bg-status-complete/5 p-4 text-sm overflow-x-auto"><code>{after}</code></pre>
+  </div>
+</div>

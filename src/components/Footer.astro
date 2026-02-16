@@ -1,0 +1,31 @@
+---
+const year = new Date().getFullYear();
+const base = import.meta.env.BASE_URL;
+---
+
+<footer class="border-t border-border bg-surface-alt mt-auto">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+      <p class="text-sm text-text-secondary">
+        &copy; {year} Project Journal. Built with
+        <a href="https://astro.build" class="text-brand hover:text-brand-light transition-colors">Astro</a>
+        and
+        <a href="https://claude.ai/claude-code" class="text-brand hover:text-brand-light transition-colors">Claude Code</a>.
+      </p>
+      <div class="flex items-center gap-4">
+        <a
+          href={`${base}rss.xml`}
+          class="text-text-secondary hover:text-brand transition-colors text-sm"
+        >
+          RSS
+        </a>
+        <a
+          href="https://github.com/bwarren2"
+          class="text-text-secondary hover:text-brand transition-colors text-sm"
+        >
+          GitHub
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>

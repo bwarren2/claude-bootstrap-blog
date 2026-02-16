@@ -1,0 +1,38 @@
+---
+interface Props {
+  tech: string;
+  size?: "sm" | "md";
+  clickable?: boolean;
+}
+
+const { tech, size = "sm", clickable = false } = Astro.props;
+
+const sizeClasses = {
+  sm: "px-2 py-0.5 text-xs",
+  md: "px-2.5 py-1 text-sm",
+};
+---
+
+{
+  clickable ? (
+    <button
+      type="button"
+      data-filter-tech={tech}
+      class:list={[
+        "inline-flex items-center rounded-md bg-brand/10 text-brand font-medium transition-colors hover:bg-brand/20 cursor-pointer",
+        sizeClasses[size],
+      ]}
+    >
+      {tech}
+    </button>
+  ) : (
+    <span
+      class:list={[
+        "inline-flex items-center rounded-md bg-brand/10 text-brand font-medium",
+        sizeClasses[size],
+      ]}
+    >
+      {tech}
+    </span>
+  )
+}

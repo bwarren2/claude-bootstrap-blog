@@ -1,0 +1,92 @@
+---
+title: "Building This Blog with Claude Code"
+description: "A meta project — using Claude Code to build the very blog that documents AI-assisted development. Covers the full stack: Astro 5, Tailwind v4, MDX, and GitHub Pages."
+pubDate: 2026-02-16
+status: complete
+difficulty: intermediate
+ambitionRating: 4
+repoUrl: "https://github.com/bwarren2/claude-bootstrap-blog"
+techStack: ["Astro", "Tailwind CSS", "TypeScript", "MDX", "GitHub Actions"]
+projectType: "web-app"
+claudeTechniques: ["plan-mode", "scaffold-then-fill", "iterative-refinement", "memory-files"]
+tags: ["meta", "blog", "static-site", "portfolio"]
+featured: true
+readingOrder: 1
+promptSnippets:
+  - prompt: "Implement the following plan: [full project spec with phases, file lists, and build order]"
+    context: "Initial project scaffold from a detailed plan document"
+    effectiveness: high
+    notes: "Providing the complete spec upfront let Claude scaffold the entire project in one session without back-and-forth."
+  - prompt: "Use plan mode to design the content schema before implementing"
+    context: "Content collection schema design"
+    effectiveness: high
+    notes: "Plan mode helped identify all the frontmatter fields needed across features before writing any code."
+costTracking:
+  inputTokens: 150000
+  outputTokens: 80000
+  totalCost: 4.50
+  sessions: 2
+lessonsLearned:
+  whatWorked:
+    - "Detailed upfront planning with explicit phases and file lists"
+    - "Scaffold-then-fill approach — get structure right first, then content"
+    - "Using Tailwind v4's @theme for design tokens kept styling consistent"
+  whatDidnt:
+    - "Initial prompt was too long — had to split into phases"
+    - "Some component props needed adjustment after seeing real content"
+  whatIdDoDifferently:
+    - "Start with sample content earlier to validate the schema"
+    - "Use more specific TypeScript types from the beginning"
+---
+
+## The Inception Problem
+
+This blog is its own first post — a project documenting the process of building the tool that documents projects. It's turtles all the way down.
+
+## Why Build a Blog for This?
+
+I wanted a single place to track what works (and what doesn't) when building software with Claude Code. After several projects, patterns started emerging:
+
+- Some prompting techniques consistently produce better results
+- Cost varies wildly depending on approach
+- Lessons learned in one project directly apply to the next
+
+A blog felt like the right format — structured enough to be useful, flexible enough to capture the messy reality of AI-assisted development.
+
+## Tech Stack Decisions
+
+### Why Astro?
+
+Static site generation is perfect for a blog. Astro's content collections give type-safe frontmatter, MDX support means I can embed interactive components, and the build output is just HTML + CSS + minimal JS.
+
+### Why Tailwind v4?
+
+Tailwind v4's `@theme` directive makes design tokens first-class. The `@tailwindcss/vite` plugin replaces the old PostCSS approach, and `@tailwindcss/typography` handles prose styling out of the box.
+
+### Why MDX?
+
+Plain markdown can't embed components like `<BeforeAfter>` blocks or interactive prompt snippets. MDX gives the flexibility to mix prose with custom components.
+
+## The Build Process
+
+The entire blog was built in a single Claude Code session following a phased plan:
+
+1. **Scaffold** — Astro project with all integrations
+2. **Schema** — Content collection with rich frontmatter
+3. **Components** — ~25 Astro components for the UI
+4. **Content** — Sample posts (including this one)
+5. **Pages** — Home, timeline, stats, about, etc.
+6. **Search** — Client-side Fuse.js filtering
+7. **Deploy** — GitHub Actions to Pages
+
+## What Made This Work
+
+The key insight: **give Claude the complete specification upfront**. The plan document included:
+
+- Every file that needed to be created
+- The exact tech stack and versions
+- Schema definitions with field types
+- Component names and their purposes
+- A build order that handled dependencies
+
+This eliminated most back-and-forth and let Claude work through the implementation systematically.

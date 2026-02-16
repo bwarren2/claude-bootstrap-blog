@@ -1,0 +1,21 @@
+---
+interface Props {
+  tags: Map<string, number>;
+  type?: "tech" | "tag" | "technique";
+}
+
+const { tags, type = "tag" } = Astro.props;
+
+const sorted = [...tags.entries()].sort((a, b) => b[1] - a[1]);
+---
+
+<div class="flex flex-wrap gap-2">
+  {
+    sorted.map(([tag, count]) => (
+      <span class="inline-flex items-center gap-1 rounded-full bg-surface-alt border border-border px-3 py-1 text-sm text-text-secondary hover:border-brand hover:text-brand transition-colors">
+        {tag}
+        <span class="text-xs text-text-secondary/60">({count})</span>
+      </span>
+    ))
+  }
+</div>

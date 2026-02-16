@@ -1,0 +1,61 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="About"
+  description="About this blog, how it's built, and why it exists."
+>
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-3xl sm:text-4xl font-bold text-text-primary mb-6">About</h1>
+
+    <div class="prose prose-lg max-w-none prose-headings:text-text-primary prose-a:text-brand">
+      <p>
+        This blog documents my experience building software projects with
+        <a href="https://claude.ai/claude-code">Claude Code</a>, Anthropic's
+        CLI for Claude. Each post captures a complete project — the good, the
+        bad, and the lessons learned.
+      </p>
+
+      <h2>What You'll Find Here</h2>
+      <p>Each project post includes:</p>
+      <ul>
+        <li><strong>Status tracking</strong> — complete, in-progress, or abandoned (yes, some fail)</li>
+        <li><strong>Prompt snippets</strong> — the actual prompts that worked (and didn't)</li>
+        <li><strong>Cost tracking</strong> — token usage and dollar costs per project</li>
+        <li><strong>Lessons learned</strong> — what worked, what didn't, what I'd do differently</li>
+        <li><strong>Tech stack details</strong> — every tool, framework, and library used</li>
+        <li><strong>Claude techniques</strong> — which Claude Code features and approaches were used</li>
+      </ul>
+
+      <h2>How Claude Code Is Used</h2>
+      <p>
+        Claude Code is an agentic coding assistant that runs in the terminal.
+        Unlike chat-based AI tools, it can read files, write code, run commands,
+        and iterate on implementations autonomously. I use it for:
+      </p>
+      <ul>
+        <li>Scaffolding new projects from detailed specifications</li>
+        <li>Implementing features with test-driven development</li>
+        <li>Reviewing code for bugs and security issues</li>
+        <li>Refactoring and improving existing codebases</li>
+      </ul>
+
+      <h2>Why Document This?</h2>
+      <p>
+        AI-assisted development is new, and best practices are still emerging.
+        By documenting each project in detail — including failures — I'm building
+        a reference for what actually works. The patterns that emerge across
+        projects are more valuable than any single success story.
+      </p>
+
+      <h2>About This Blog</h2>
+      <p>
+        Built with <a href="https://astro.build">Astro 5</a>,
+        <a href="https://tailwindcss.com">Tailwind CSS v4</a>, TypeScript, and MDX.
+        Deployed to GitHub Pages via GitHub Actions. The entire blog was built
+        using Claude Code — making it the ultimate meta-project.
+      </p>
+    </div>
+  </div>
+</BaseLayout>

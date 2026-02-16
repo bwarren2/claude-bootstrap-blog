@@ -1,0 +1,76 @@
+---
+interface Props {
+  lessonsLearned?: {
+    whatWorked: string[];
+    whatDidnt: string[];
+    whatIdDoDifferently: string[];
+  };
+}
+
+const { lessonsLearned } = Astro.props;
+
+if (!lessonsLearned) return;
+const { whatWorked, whatDidnt, whatIdDoDifferently } = lessonsLearned;
+const hasContent = whatWorked.length > 0 || whatDidnt.length > 0 || whatIdDoDifferently.length > 0;
+if (!hasContent) return;
+---
+
+<section class="mt-12 pt-8 border-t border-border">
+  <h2 class="text-2xl font-bold text-text-primary mb-6">Lessons Learned</h2>
+
+  <div class="grid gap-6 md:grid-cols-3">
+    {
+      whatWorked.length > 0 && (
+        <div class="rounded-lg border border-status-complete/30 bg-status-complete/5 p-5">
+          <h3 class="font-semibold text-status-complete mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            What Worked
+          </h3>
+          <ul class="space-y-2">
+            {whatWorked.map((item) => (
+              <li class="text-sm text-text-secondary">{item}</li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+
+    {
+      whatDidnt.length > 0 && (
+        <div class="rounded-lg border border-status-abandoned/30 bg-status-abandoned/5 p-5">
+          <h3 class="font-semibold text-status-abandoned mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            What Didn't Work
+          </h3>
+          <ul class="space-y-2">
+            {whatDidnt.map((item) => (
+              <li class="text-sm text-text-secondary">{item}</li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+
+    {
+      whatIdDoDifferently.length > 0 && (
+        <div class="rounded-lg border border-status-in-progress/30 bg-status-in-progress/5 p-5">
+          <h3 class="font-semibold text-status-in-progress mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            What I'd Do Differently
+          </h3>
+          <ul class="space-y-2">
+            {whatIdDoDifferently.map((item) => (
+              <li class="text-sm text-text-secondary">{item}</li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+  </div>
+</section>

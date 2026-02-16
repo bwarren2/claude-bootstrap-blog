@@ -1,0 +1,83 @@
+---
+title: "Mac Setup Automation Script"
+description: "A shell script that configures a fresh macOS install with dev tools, apps, dotfiles, and system preferences. Idempotent and well-documented."
+pubDate: 2026-02-10
+status: complete
+difficulty: beginner
+ambitionRating: 2
+repoUrl: "https://github.com/bwarren2/mac-setup"
+techStack: ["Bash", "Homebrew", "macOS"]
+projectType: "automation"
+claudeTechniques: ["constraint-prompting", "decomposition", "code-review"]
+tags: ["automation", "macos", "dotfiles", "shell"]
+readingOrder: 3
+promptSnippets:
+  - prompt: "Write an idempotent macOS setup script that installs Homebrew, my dev tools (listed below), configures git, sets up SSH keys, and applies macOS defaults. It should be safe to run multiple times."
+    context: "Initial prompt with explicit idempotency requirement"
+    effectiveness: high
+    notes: "The constraint 'idempotent' and 'safe to run multiple times' produced robust checks before every operation."
+  - prompt: "Review this script for any security issues, missing error handling, or places where it could fail silently."
+    context: "Post-implementation code review"
+    effectiveness: high
+    notes: "Claude caught three silent failures and a missing error check on the SSH key generation."
+costTracking:
+  inputTokens: 30000
+  outputTokens: 18000
+  totalCost: 0.85
+  sessions: 1
+lessonsLearned:
+  whatWorked:
+    - "Explicit constraint prompting ('idempotent', 'safe to re-run') shaped the entire implementation"
+    - "Using Claude for code review after implementation caught real bugs"
+    - "Breaking the script into clearly labeled sections made it easy to modify"
+  whatDidnt:
+    - "Some macOS defaults commands were outdated — had to verify manually"
+  whatIdDoDifferently:
+    - "Test on a fresh VM before trusting the script on real hardware"
+    - "Add a dry-run mode from the start"
+---
+
+## Why Automate Mac Setup?
+
+Every time I set up a new Mac (or wipe and reinstall), I spend hours installing tools, configuring settings, and remembering what I had before. This script captures all of that in a single `./setup.sh` command.
+
+## Design Principles
+
+### Idempotent by Design
+
+Every operation checks whether it's already been done before doing it:
+
+```bash
+# Only install Homebrew if not already present
+if ! command -v brew &>/dev/null; then
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+```
+
+This means the script is safe to run at any point — on a fresh install or on a machine that's already partially configured.
+
+### Sectioned and Documented
+
+The script is organized into clear sections:
+
+1. **Homebrew** — Package manager installation
+2. **CLI Tools** — git, ripgrep, fzf, jq, etc.
+3. **Applications** — VS Code, Firefox, iTerm2, etc.
+4. **Git Config** — Global settings, aliases, GPG signing
+5. **SSH** — Key generation and agent setup
+6. **macOS Defaults** — Dock, Finder, keyboard settings
+7. **Shell** — Zsh plugins, prompt configuration
+
+## Claude Code Review
+
+After the initial implementation, I asked Claude to review the script for issues. It found:
+
+1. **Silent curl failure** — The Homebrew install could fail without stopping the script
+2. **Missing SSH key check** — Would overwrite existing keys without warning
+3. **Deprecated defaults command** — One macOS preference used a removed domain
+
+All three were real bugs that would have caused problems.
+
+## Takeaways
+
+This project demonstrates that **constraint prompting** is incredibly effective for shell scripts. Telling Claude "make it idempotent" produced fundamentally different (and better) code than just asking for a setup script. The post-implementation review was equally valuable — a second pass with a different objective caught issues the first pass missed.

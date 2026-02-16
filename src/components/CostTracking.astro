@@ -1,0 +1,62 @@
+---
+interface Props {
+  costTracking?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalCost?: number;
+    sessions?: number;
+  };
+}
+
+const { costTracking } = Astro.props;
+if (!costTracking) return;
+
+const { inputTokens, outputTokens, totalCost, sessions } = costTracking;
+
+function formatTokens(n?: number): string {
+  if (n == null) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return n.toString();
+}
+---
+
+<div class="rounded-lg border border-border bg-surface-alt p-5">
+  <h3 class="text-sm font-semibold text-text-primary mb-4 uppercase tracking-wider">
+    Cost Tracking
+  </h3>
+  <dl class="space-y-3">
+    {
+      totalCost != null && (
+        <div class="flex justify-between">
+          <dt class="text-sm text-text-secondary">Total Cost</dt>
+          <dd class="text-sm font-mono font-semibold text-text-primary">${totalCost.toFixed(2)}</dd>
+        </div>
+      )
+    }
+    {
+      sessions != null && (
+        <div class="flex justify-between">
+          <dt class="text-sm text-text-secondary">Sessions</dt>
+          <dd class="text-sm font-mono text-text-primary">{sessions}</dd>
+        </div>
+      )
+    }
+    {
+      inputTokens != null && (
+        <div class="flex justify-between">
+          <dt class="text-sm text-text-secondary">Input Tokens</dt>
+          <dd class="text-sm font-mono text-text-primary">{formatTokens(inputTokens)}</dd>
+        </div>
+      )
+    }
+    {
+      outputTokens != null && (
+        <div class="flex justify-between">
+          <dt class="text-sm text-text-secondary">Output Tokens</dt>
+          <dd class="text-sm font-mono text-text-primary">{formatTokens(outputTokens)}</dd>
+        </div>
+      )
+    }
+  </dl>
+</div>

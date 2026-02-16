@@ -1,0 +1,194 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+
+const allProjects = await getCollection("projects", ({ data }) => !data.draft);
+
+// Stats calculations
+const totalProjects = allProjects.length;
+const completeProjects = allProjects.filter((p) => p.data.status === "complete").length;
+const inProgressProjects = allProjects.filter((p) => p.data.status === "in-progress").length;
+const abandonedProjects = allProjects.filter((p) => p.data.status === "abandoned").length;
+const successRate = totalProjects > 0 ? Math.round((completeProjects / totalProjects) * 100) : 0;
+
+// Cost totals
+const totalCost = allProjects.reduce((sum, p) => sum + (p.data.costTracking?.totalCost ?? 0), 0);
+const totalSessions = allProjects.reduce((sum, p) => sum + (p.data.costTracking?.sessions ?? 0), 0);
+const avgCost = totalProjects > 0 ? totalCost / totalProjects : 0;
+
+// Tech stack frequency
+const techCounts = new Map<string, number>();
+for (const p of allProjects) {
+  for (const tech of p.data.techStack) {
+    techCounts.set(tech, (techCounts.get(tech) ?? 0) + 1);
+  }
+}
+const topTech = [...techCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+// Technique frequency
+const techniqueCounts = new Map<string, number>();
+for (const p of allProjects) {
+  for (const t of p.data.claudeTechniques) {
+    techniqueCounts.set(t, (techniqueCounts.get(t) ?? 0) + 1);
+  }
+}
+const topTechniques = [...techniqueCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+// Difficulty distribution
+const diffCounts = { beginner: 0, intermediate: 0, advanced: 0 };
+for (const p of allProjects) {
+  diffCounts[p.data.difficulty]++;
+}
+---
+
+<BaseLayout title="Stats" description="Aggregate statistics across all projects.">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-3xl sm:text-4xl font-bold text-text-primary mb-2">Stats</h1>
+    <p class="text-lg text-text-secondary mb-8">Aggregate data across all projects.</p>
+
+    <!-- Overview cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+      <div class="rounded-xl border border-border bg-surface-alt p-5">
+        <div class="text-3xl font-bold text-text-primary">{totalProjects}</div>
+        <div class="text-sm text-text-secondary">Total Projects</div>
+      </div>
+      <div class="rounded-xl border border-border bg-surface-alt p-5">
+        <div class="text-3xl font-bold text-status-complete">{successRate}%</div>
+        <div class="text-sm text-text-secondary">Success Rate</div>
+      </div>
+      <div class="rounded-xl border border-border bg-surface-alt p-5">
+        <div class="text-3xl font-bold font-mono text-text-primary">${totalCost.toFixed(2)}</div>
+        <div class="text-sm text-text-secondary">Total Cost</div>
+      </div>
+      <div class="rounded-xl border border-border bg-surface-alt p-5">
+        <div class="text-3xl font-bold font-mono text-text-primary">{totalSessions}</div>
+        <div class="text-sm text-text-secondary">Total Sessions</div>
+      </div>
+    </div>
+
+    <div class="grid gap-8 md:grid-cols-2">
+      <!-- Status breakdown -->
+      <div class="rounded-xl border border-border bg-surface-alt p-6">
+        <h2 class="text-lg font-semibold text-text-primary mb-4">Status Breakdown</h2>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-text-secondary">Complete</span>
+            <div class="flex items-center gap-2">
+              <div class="w-32 bg-border rounded-full h-2">
+                <div
+                  class="bg-status-complete h-2 rounded-full"
+                  style={`width: ${totalProjects ? (completeProjects / totalProjects) * 100 : 0}%`}
+                ></div>
+              </div>
+              <span class="text-sm font-mono text-text-primary w-6 text-right">{completeProjects}</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-text-secondary">In Progress</span>
+            <div class="flex items-center gap-2">
+              <div class="w-32 bg-border rounded-full h-2">
+                <div
+                  class="bg-status-in-progress h-2 rounded-full"
+                  style={`width: ${totalProjects ? (inProgressProjects / totalProjects) * 100 : 0}%`}
+                ></div>
+              </div>
+              <span class="text-sm font-mono text-text-primary w-6 text-right">{inProgressProjects}</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-text-secondary">Abandoned</span>
+            <div class="flex items-center gap-2">
+              <div class="w-32 bg-border rounded-full h-2">
+                <div
+                  class="bg-status-abandoned h-2 rounded-full"
+                  style={`width: ${totalProjects ? (abandonedProjects / totalProjects) * 100 : 0}%`}
+                ></div>
+              </div>
+              <span class="text-sm font-mono text-text-primary w-6 text-right">{abandonedProjects}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost breakdown -->
+      <div class="rounded-xl border border-border bg-surface-alt p-6">
+        <h2 class="text-lg font-semibold text-text-primary mb-4">Cost Breakdown</h2>
+        <dl class="space-y-3">
+          <div class="flex justify-between">
+            <dt class="text-sm text-text-secondary">Total Spent</dt>
+            <dd class="text-sm font-mono font-semibold text-text-primary">${totalCost.toFixed(2)}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-sm text-text-secondary">Avg. per Project</dt>
+            <dd class="text-sm font-mono text-text-primary">${avgCost.toFixed(2)}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-sm text-text-secondary">Total Sessions</dt>
+            <dd class="text-sm font-mono text-text-primary">{totalSessions}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Top tech -->
+      <div class="rounded-xl border border-border bg-surface-alt p-6">
+        <h2 class="text-lg font-semibold text-text-primary mb-4">Top Technologies</h2>
+        <div class="space-y-2">
+          {
+            topTech.map(([tech, count]) => (
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-text-secondary">{tech}</span>
+                <div class="flex items-center gap-2">
+                  <div class="w-24 bg-border rounded-full h-2">
+                    <div
+                      class="bg-brand h-2 rounded-full"
+                      style={`width: ${(count / (topTech[0]?.[1] ?? 1)) * 100}%`}
+                    />
+                  </div>
+                  <span class="text-sm font-mono text-text-primary w-6 text-right">{count}</span>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <!-- Top techniques -->
+      <div class="rounded-xl border border-border bg-surface-alt p-6">
+        <h2 class="text-lg font-semibold text-text-primary mb-4">Top Claude Techniques</h2>
+        <div class="space-y-2">
+          {
+            topTechniques.map(([technique, count]) => (
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-text-secondary">{technique}</span>
+                <div class="flex items-center gap-2">
+                  <div class="w-24 bg-border rounded-full h-2">
+                    <div
+                      class="bg-brand-light h-2 rounded-full"
+                      style={`width: ${(count / (topTechniques[0]?.[1] ?? 1)) * 100}%`}
+                    />
+                  </div>
+                  <span class="text-sm font-mono text-text-primary w-6 text-right">{count}</span>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <!-- Difficulty -->
+      <div class="rounded-xl border border-border bg-surface-alt p-6 md:col-span-2">
+        <h2 class="text-lg font-semibold text-text-primary mb-4">Difficulty Distribution</h2>
+        <div class="flex gap-8">
+          {
+            (Object.entries(diffCounts) as [string, number][]).map(([level, count]) => (
+              <div class="text-center">
+                <div class="text-2xl font-bold text-text-primary">{count}</div>
+                <div class="text-sm text-text-secondary capitalize">{level}</div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

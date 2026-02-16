@@ -1,0 +1,25 @@
+---
+import PromptBlock from "./PromptBlock.astro";
+
+interface PromptSnippet {
+  prompt: string;
+  context?: string;
+  effectiveness: "high" | "medium" | "low";
+  notes?: string;
+}
+
+interface Props {
+  snippets: PromptSnippet[];
+}
+
+const { snippets } = Astro.props;
+
+if (snippets.length === 0) return;
+---
+
+<section class="mt-12 pt-8 border-t border-border">
+  <h2 class="text-2xl font-bold text-text-primary mb-6">Prompt Snippets</h2>
+  <div class="space-y-4">
+    {snippets.map((snippet) => <PromptBlock {...snippet} />)}
+  </div>
+</section>

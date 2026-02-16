@@ -1,0 +1,81 @@
+---
+title: "Real-Time Analytics Dashboard"
+description: "An ambitious attempt at a React dashboard with WebSocket data, D3 charts, and a Node backend. Abandoned after scope creep made it unmanageable in a single session."
+pubDate: 2026-02-01
+status: abandoned
+difficulty: advanced
+ambitionRating: 5
+repoUrl: "https://github.com/bwarren2/react-dashboard"
+techStack: ["React", "TypeScript", "D3.js", "WebSocket", "Node.js", "Express"]
+projectType: "web-app"
+claudeTechniques: ["scaffold-then-fill", "context-priming"]
+tags: ["react", "data-viz", "real-time", "overscoped"]
+promptSnippets:
+  - prompt: "Build a real-time analytics dashboard with React, D3 charts, and a WebSocket backend. Include line charts, bar charts, a data table, and live-updating metrics."
+    context: "Initial ambitious prompt"
+    effectiveness: low
+    notes: "Way too much scope for a single prompt. Should have started with one chart type and iterated."
+  - prompt: "Just focus on the WebSocket connection and a single line chart first."
+    context: "Course correction after initial overwhelm"
+    effectiveness: medium
+    notes: "Narrowing scope helped, but the project had already accumulated too much incomplete code."
+costTracking:
+  inputTokens: 200000
+  outputTokens: 120000
+  totalCost: 8.50
+  sessions: 3
+lessonsLearned:
+  whatWorked:
+    - "D3 chart components worked well in isolation"
+    - "WebSocket setup was clean and reusable"
+  whatDidnt:
+    - "Too much scope in the initial prompt"
+    - "Context window filled up before the project was complete"
+    - "Trying to build frontend and backend simultaneously"
+    - "D3 + React integration is inherently complex — bad choice for AI-assisted rapid prototyping"
+  whatIdDoDifferently:
+    - "Start with a static mockup, then add real-time features incrementally"
+    - "Pick either frontend or backend, not both, for a single session"
+    - "Use a simpler charting library like Recharts instead of raw D3"
+    - "Set a hard scope limit before starting"
+---
+
+## What Happened
+
+This project was an exercise in over-ambition. I wanted a full real-time analytics dashboard — the kind of thing that takes a team weeks — built in a single Claude Code session.
+
+## The Scope Problem
+
+The initial prompt asked for:
+
+- WebSocket server with simulated data streams
+- React frontend with multiple chart types
+- D3.js line charts, bar charts, and area charts
+- Real-time data table with sorting and filtering
+- Dashboard layout with responsive grid
+- Theme support (light/dark)
+
+That's easily 6 separate projects crammed into one prompt.
+
+## Where It Went Wrong
+
+### Context Window Exhaustion
+
+By the time the basic WebSocket server and React boilerplate were in place, a significant chunk of context had been consumed. Adding D3 charts — which require careful DOM manipulation that conflicts with React's virtual DOM — pushed the conversation to its limits.
+
+### Integration Complexity
+
+Each piece worked in isolation. The WebSocket server streamed data correctly. Individual D3 charts rendered fine. But wiring them together with React state management, reconnection logic, and error handling created a combinatorial explosion of edge cases.
+
+## What I Salvaged
+
+The WebSocket setup and basic chart components are genuinely reusable. I've extracted them into separate files for future projects. The dashboard itself remains incomplete.
+
+## The Lesson
+
+**Ambition rating 5 projects need a fundamentally different approach.** You can't just throw a big prompt at Claude and expect a complex, multi-system application to emerge. These projects need:
+
+1. Incremental building (one feature at a time)
+2. Multiple sessions with clear handoff points
+3. Strict scope limits per session
+4. A willingness to simplify when things get complex

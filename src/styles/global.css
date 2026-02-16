@@ -1,0 +1,63 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-brand: #6d28d9;
+  --color-brand-light: #8b5cf6;
+  --color-brand-dark: #5b21b6;
+
+  --color-status-complete: #10b981;
+  --color-status-in-progress: #f59e0b;
+  --color-status-abandoned: #ef4444;
+
+  --color-surface: #ffffff;
+  --color-surface-alt: #f9fafb;
+  --color-surface-dark: #0f172a;
+  --color-surface-dark-alt: #1e293b;
+
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-dark-primary: #f1f5f9;
+  --color-text-dark-secondary: #94a3b8;
+
+  --color-border: #e2e8f0;
+  --color-border-dark: #334155;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas,
+    "DejaVu Sans Mono", monospace;
+}
+
+/* Dark mode */
+.dark {
+  --color-surface: #0f172a;
+  --color-surface-alt: #1e293b;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-border: #334155;
+}
+
+/* Prose dark mode overrides */
+.dark .prose {
+  --tw-prose-body: #cbd5e1;
+  --tw-prose-headings: #f1f5f9;
+  --tw-prose-links: #8b5cf6;
+  --tw-prose-bold: #f1f5f9;
+  --tw-prose-code: #e2e8f0;
+  --tw-prose-pre-bg: #1e293b;
+  --tw-prose-pre-code: #e2e8f0;
+  --tw-prose-quotes: #94a3b8;
+  --tw-prose-quote-borders: #334155;
+  --tw-prose-counters: #94a3b8;
+  --tw-prose-bullets: #475569;
+  --tw-prose-hr: #334155;
+  --tw-prose-th-borders: #334155;
+  --tw-prose-td-borders: #1e293b;
+}
+
+/* Shiki dual theme support */
+.dark .astro-code,
+.dark .astro-code span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}

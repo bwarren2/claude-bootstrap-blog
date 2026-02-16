@@ -1,0 +1,31 @@
+---
+interface Props {
+  difficulty: "beginner" | "intermediate" | "advanced";
+}
+
+const { difficulty } = Astro.props;
+
+const config = {
+  beginner: { label: "Beginner", dots: 1, color: "text-status-complete" },
+  intermediate: { label: "Intermediate", dots: 2, color: "text-status-in-progress" },
+  advanced: { label: "Advanced", dots: 3, color: "text-status-abandoned" },
+};
+
+const { label, dots, color } = config[difficulty];
+---
+
+<span class="inline-flex items-center gap-1.5 text-sm">
+  <span class={`font-medium ${color}`}>{label}</span>
+  <span class="flex gap-0.5">
+    {
+      Array.from({ length: 3 }).map((_, i) => (
+        <span
+          class:list={[
+            "w-1.5 h-1.5 rounded-full",
+            i < dots ? color.replace("text-", "bg-") : "bg-border",
+          ]}
+        />
+      ))
+    }
+  </span>
+</span>

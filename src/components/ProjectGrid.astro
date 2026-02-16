@@ -1,0 +1,18 @@
+---
+import ProjectCard from "./ProjectCard.astro";
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  projects: CollectionEntry<"projects">[];
+}
+
+const { projects } = Astro.props;
+---
+
+<div id="project-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {projects.map((project) => <ProjectCard project={project} />)}
+</div>
+
+<p id="no-results" class="hidden text-center text-text-secondary py-12">
+  No projects match your filters.
+</p>

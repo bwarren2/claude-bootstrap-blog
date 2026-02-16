@@ -1,0 +1,39 @@
+---
+interface TocItem {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: TocItem[];
+}
+
+const { headings } = Astro.props;
+const filteredHeadings = headings.filter((h) => h.depth >= 2 && h.depth <= 3);
+---
+
+{
+  filteredHeadings.length > 0 && (
+    <nav class="toc">
+      <h2 class="text-sm font-semibold text-text-primary mb-3 uppercase tracking-wider">
+        On this page
+      </h2>
+      <ul class="space-y-1.5">
+        {filteredHeadings.map((heading) => (
+          <li>
+            <a
+              href={`#${heading.slug}`}
+              class:list={[
+                "block text-sm text-text-secondary hover:text-brand transition-colors",
+                heading.depth === 3 && "pl-4",
+              ]}
+            >
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
