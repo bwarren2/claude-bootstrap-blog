@@ -68,7 +68,7 @@ const tags = [...new Set(projects.flatMap((p) => p.data.tags))].sort();
     let fuse: Fuse<SearchItem> | null = null;
     let searchData: SearchItem[] = [];
 
-    fetch(import.meta.env.BASE_URL + "search.json")
+    fetch(import.meta.env.BASE_URL.replace(/\/?$/, "/") + "search.json")
       .then((r) => r.json())
       .then((data: SearchItem[]) => {
         searchData = data;

@@ -17,7 +17,7 @@ const {
   pubDate,
 } = Astro.props;
 
-const base = import.meta.env.BASE_URL;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 const siteTitle = "Project Journal";
 const fullTitle = title === siteTitle ? title : `${title} | ${siteTitle}`;
 const ogImage = image || new URL(`${base}og/default.png`, Astro.site).toString();
