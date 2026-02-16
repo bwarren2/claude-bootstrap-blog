@@ -1,83 +1,102 @@
 ---
-title: "Mac Setup Automation Script"
-description: "A shell script that configures a fresh macOS install with dev tools, apps, dotfiles, and system preferences. Idempotent and well-documented."
-pubDate: 2026-02-10
+title: "Mac Mini Dev Environment Setup"
+description: "Setting up a fresh Mac Mini for development using a Claude-generated shell script. Installs CLI tools, Oh My Zsh, Powerlevel10k, and configures .zshrc and .gitconfig — all from a single prompt."
+pubDate: 2026-02-14
 status: complete
 difficulty: beginner
 ambitionRating: 2
-repoUrl: "https://github.com/bwarren2/mac-setup"
-techStack: ["Bash", "Homebrew", "macOS"]
+transcriptUrls: ["https://claude.ai/chat/91e6a6f7-7e38-481e-9edc-99c9aa401243"]
+techStack: ["Bash", "Homebrew", "macOS", "Zsh"]
 projectType: "automation"
-claudeTechniques: ["constraint-prompting", "decomposition", "code-review"]
-tags: ["automation", "macos", "dotfiles", "shell"]
-readingOrder: 3
-promptSnippets:
-  - prompt: "Write an idempotent macOS setup script that installs Homebrew, my dev tools (listed below), configures git, sets up SSH keys, and applies macOS defaults. It should be safe to run multiple times."
-    context: "Initial prompt with explicit idempotency requirement"
-    effectiveness: high
-    notes: "The constraint 'idempotent' and 'safe to run multiple times' produced robust checks before every operation."
-  - prompt: "Review this script for any security issues, missing error handling, or places where it could fail silently."
-    context: "Post-implementation code review"
-    effectiveness: high
-    notes: "Claude caught three silent failures and a missing error check on the SSH key generation."
-costTracking:
-  inputTokens: 30000
-  outputTokens: 18000
-  totalCost: 0.85
-  sessions: 1
+claudeTechniques: ["scaffold-then-fill"]
+tags: ["automation", "macos", "dotfiles", "shell", "dev-environment"]
 lessonsLearned:
   whatWorked:
-    - "Explicit constraint prompting ('idempotent', 'safe to re-run') shaped the entire implementation"
-    - "Using Claude for code review after implementation caught real bugs"
-    - "Breaking the script into clearly labeled sections made it easy to modify"
+    - "Describing the desired end state to Claude produced a well-structured, sectioned script"
+    - "The script included idempotent checks (e.g. skip Oh My Zsh if already installed) without being asked"
+    - "Backing up .zshrc before overwriting was a nice safety touch Claude added on its own"
   whatDidnt:
-    - "Some macOS defaults commands were outdated — had to verify manually"
+    - "tldr was deprecated in Homebrew — Claude's training data was stale on this package"
+    - "No macOS system preferences (Dock, Finder, keyboard) were included"
   whatIdDoDifferently:
-    - "Test on a fresh VM before trusting the script on real hardware"
-    - "Add a dry-run mode from the start"
+    - "Ask for a dry-run mode to preview what would be installed"
+    - "Add macOS defaults configuration for Dock size, Finder settings, key repeat"
+    - "Use Claude Code instead of web chat — easier to iterate and test on the actual machine"
 ---
 
-## Why Automate Mac Setup?
+## The Project
 
-Every time I set up a new Mac (or wipe and reinstall), I spend hours installing tools, configuring settings, and remembering what I had before. This script captures all of that in a single `./setup.sh` command.
+New Mac Mini, blank slate. I needed a full dev environment — terminal, shell, CLI tools, git config — and didn't want to spend an afternoon manually installing things and copying dotfiles from old machines.
 
-## Design Principles
+## The Approach
 
-### Idempotent by Design
+This was a **Claude.ai web chat** project, not Claude Code. I described what I wanted in a single message: a setup script that installs my preferred CLI tools via Homebrew, sets up a nice terminal with Oh My Zsh and Powerlevel10k, and configures git with delta for diffs.
 
-Every operation checks whether it's already been done before doing it:
+Claude returned a complete, ready-to-run shell script. I saved it, `chmod +x`, and ran it.
+
+## What the Script Does
+
+The script is organized into 8 clearly labeled sections:
+
+### 1. CLI Tools via Homebrew
 
 ```bash
-# Only install Homebrew if not already present
-if ! command -v brew &>/dev/null; then
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-fi
+brew install eza bat ripgrep fzf jq htop gh tldr tmux \
+  zsh-autosuggestions zsh-syntax-highlighting git-delta
 ```
 
-This means the script is safe to run at any point — on a fresh install or on a machine that's already partially configured.
+Modern replacements for standard Unix tools: `eza` for `ls`, `bat` for `cat`, `ripgrep` for `grep`, `fzf` for fuzzy finding, `delta` for git diffs.
 
-### Sectioned and Documented
+### 2. iTerm2 + Nerd Font
 
-The script is organized into clear sections:
+```bash
+brew install --cask iterm2
+brew install --cask font-meslo-lg-nerd-font
+```
 
-1. **Homebrew** — Package manager installation
-2. **CLI Tools** — git, ripgrep, fzf, jq, etc.
-3. **Applications** — VS Code, Firefox, iTerm2, etc.
-4. **Git Config** — Global settings, aliases, GPG signing
-5. **SSH** — Key generation and agent setup
-6. **macOS Defaults** — Dock, Finder, keyboard settings
-7. **Shell** — Zsh plugins, prompt configuration
+iTerm2 as the terminal, with MesloLGS Nerd Font for Powerlevel10k's icons.
 
-## Claude Code Review
+### 3-4. Oh My Zsh + Powerlevel10k
 
-After the initial implementation, I asked Claude to review the script for issues. It found:
+Installs Oh My Zsh with `RUNZSH=no KEEP_ZSHRC=yes` to avoid interrupting the script, then clones Powerlevel10k into the custom themes directory. Both include checks to skip if already installed.
 
-1. **Silent curl failure** — The Homebrew install could fail without stopping the script
-2. **Missing SSH key check** — Would overwrite existing keys without warning
-3. **Deprecated defaults command** — One macOS preference used a removed domain
+### 5. fzf Key Bindings
 
-All three were real bugs that would have caused problems.
+Sets up `Ctrl+T` (file search), `Ctrl+R` (history search), and `Alt+C` (cd into directory) bindings.
 
-## Takeaways
+### 6. .zshrc Configuration
 
-This project demonstrates that **constraint prompting** is incredibly effective for shell scripts. Telling Claude "make it idempotent" produced fundamentally different (and better) code than just asking for a setup script. The post-implementation review was equally valuable — a second pass with a different objective caught issues the first pass missed.
+The biggest section — writes a complete `.zshrc` with:
+
+- **Powerlevel10k** instant prompt at the top
+- **Oh My Zsh** plugins: git, z, docker, history, jsontools
+- **Homebrew zsh plugins**: autosuggestions and syntax highlighting
+- **fzf** integration with ripgrep as the default file finder
+- **Aliases**: `ls` → `eza`, `cat` → `bat`, `grep` → `rg`, `top` → `htop`, plus git shortcuts
+
+Backs up the existing `.zshrc` with a timestamp before overwriting.
+
+### 7. .gitconfig
+
+Configures git with delta as the pager, side-by-side diffs, line numbers, Dracula syntax theme, and useful aliases (`st`, `co`, `br`, `lg`, `unstage`, `last`).
+
+### 8. Next Steps
+
+Prints manual follow-up tasks: set the Nerd Font in iTerm2, run `p10k configure`, authenticate with `gh auth login`.
+
+## How It Went
+
+The script ran cleanly from start to finish. One issue: **`tldr` is deprecated in Homebrew** (replaced by `tlrc`). The install still succeeded with a warning, but it's a clear example of Claude's training data going stale on package names.
+
+Everything else worked: 12 CLI tools, iTerm2, 60+ font files, Oh My Zsh, Powerlevel10k, fzf bindings, and both config files — all installed in a couple of minutes.
+
+The remaining steps were manual by design: configuring the iTerm2 font, running the Powerlevel10k setup wizard (`p10k configure`), and authenticating with GitHub.
+
+## Claude.ai vs Claude Code
+
+This was done through Claude.ai's web interface, not Claude Code. The tradeoff:
+
+- **Web chat was fine for this** — a single prompt produced a complete, working script. No iteration needed.
+- **Claude Code would have been better for refinement** — if I'd wanted to add macOS defaults, tweak the aliases, or debug issues, being on the actual machine with file access would have been faster than copy-pasting between a browser and terminal.
+
+For simple, well-defined automation tasks, web chat works. For anything iterative, Claude Code is the better tool.
