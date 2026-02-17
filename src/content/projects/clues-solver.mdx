@@ -11,6 +11,7 @@ techStack: ["Python", "Z3", "Playwright", "pytest"]
 projectType: "automation"
 claudeTechniques: ["plan-mode", "scaffold-then-fill", "iterative-refinement", "live-debugging"]
 tags: ["solver", "constraint-satisfaction", "browser-automation", "logic-puzzle", "z3"]
+heroImage: "/claude-bootstrap-blog/images/clues-solver-demo.gif"
 featured: true
 readingOrder: 3
 promptSnippets:
@@ -45,6 +46,10 @@ lessonsLearned:
 Clues come in dozens of forms: "There are no innocents above Luigi", "Both criminals below Diane are connected", "Each column has at least one criminal". As you correctly mark suspects, new clues are revealed on their cards.
 
 This is exactly the kind of problem a constraint solver was made for.
+
+Here's the solver completing today's puzzle automatically — click a card, read the clue, deduce, repeat:
+
+![Solver demo — completing the puzzle in 14 iterations](/claude-bootstrap-blog/images/clues-solver-demo.gif)
 
 ## Architecture
 
