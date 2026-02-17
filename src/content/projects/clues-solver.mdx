@@ -1,0 +1,161 @@
+---
+title: "Solving a Logic Puzzle with Z3 and Playwright"
+description: "Building an automated solver for Clues by Sam — a daily 5x4 grid puzzle — using Python, Z3 for constraint satisfaction, and Playwright for browser automation. Claude Code wrote the solver, then iteratively added clue patterns until it completed the puzzle."
+pubDate: 2026-02-16
+status: complete
+difficulty: advanced
+ambitionRating: 5
+repoUrl: "https://github.com/bwarren2/clues-solver"
+liveUrl: "https://cluesbysam.com"
+techStack: ["Python", "Z3", "Playwright", "pytest"]
+projectType: "automation"
+claudeTechniques: ["plan-mode", "scaffold-then-fill", "iterative-refinement", "live-debugging"]
+tags: ["solver", "constraint-satisfaction", "browser-automation", "logic-puzzle", "z3"]
+featured: true
+readingOrder: 3
+promptSnippets:
+  - prompt: "Execute the plan in PLAN.md"
+    context: "A detailed plan document specifying 6 phases, file structure, build order, and architecture"
+    effectiveness: high
+    notes: "Claude scaffolded the entire project — models, spatial helpers, parser, solver, browser automation, orchestrator, and tests — from one plan document."
+  - prompt: "Run the solver against today's puzzle with a browser I can see"
+    context: "After the scaffold was built and DOM selectors were discovered from the live site"
+    effectiveness: high
+    notes: "Kicked off the iterative solve-fix-solve loop. Claude ran the solver, hit unrecognized clue patterns, added regex + Z3 constraints for each, and re-ran until the puzzle was complete."
+lessonsLearned:
+  whatWorked:
+    - "Detailed upfront planning with a phased build order meant the scaffold was correct on first pass"
+    - "Using Z3 for constraint satisfaction made the logic bulletproof — no heuristics, just SAT/UNSAT probing"
+    - "The iterative feedback loop (run solver → see unrecognized clue → add pattern → re-run) was extremely efficient with Claude Code"
+    - "Discovery script to dump raw DOM before writing selectors saved a lot of guessing"
+  whatDidnt:
+    - "Placeholder DOM selectors in the initial scaffold were all wrong — had to discover real selectors from the live site"
+    - "Non-breaking spaces in game text caused silent regex mismatches that were hard to spot"
+    - "The selectors.py filename shadowed Python's stdlib selectors module, breaking Playwright's asyncio imports"
+  whatIdDoDifferently:
+    - "Start with DOM discovery before writing any browser code — don't guess at selectors"
+    - "Add whitespace normalization from the start rather than after hitting the bug"
+    - "Build a clue pattern test harness that can replay a full puzzle from saved clue text"
+---
+
+## The Puzzle
+
+[Clues by Sam](https://cluesbysam.com) is a daily logic puzzle. You get a 5x4 grid of 20 suspects, each with a name and profession. One suspect starts revealed with a clue. Your job: deduce which suspects are criminal and which are innocent using only logic — the game rejects guesses that aren't logically forced.
+
+Clues come in dozens of forms: "There are no innocents above Luigi", "Both criminals below Diane are connected", "Each column has at least one criminal". As you correctly mark suspects, new clues are revealed on their cards.
+
+This is exactly the kind of problem a constraint solver was made for.
+
+## Architecture
+
+The solver has six modules, each with a clear responsibility:
+
+- **`models.py`** — Data classes: `Position` (row 1-5, col A-D), `Suspect`, `Clue` (wrapping a Z3 boolean constraint)
+- **`spatial.py`** — Grid geometry: 8-adjacency, 4-adjacency, directional helpers, between, edges, connectivity constraints
+- **`parser.py`** — Regex-based clue text to Z3 constraint translation (30+ patterns)
+- **`solver.py`** — Forced-assignment detection via SAT/UNSAT probing
+- **`browser.py`** — Playwright automation to read grid state, read clues, and click suspects
+- **`main.py`** — Orchestrator loop tying it all together
+
+### The Solving Loop
+
+```
+while unknown suspects remain:
+    1. Read all visible clues from the DOM
+    2. Parse each clue into a Z3 constraint
+    3. For each unknown cell, ask Z3:
+       - Can this cell be True (criminal)?
+       - Can this cell be False (innocent)?
+       - If only one is satisfiable, it's forced.
+    4. Mark forced suspects in the browser
+    5. Wait for new clues to appear
+```
+
+The key insight is that Z3 doesn't guess — it proves. For each unknown cell, we add the constraint "this cell is criminal" and check satisfiability, then do the same for "this cell is innocent". If exactly one is SAT, the assignment is logically forced and the game will accept it.
+
+## Building It
+
+### Phase 1: Plan and Scaffold
+
+I wrote a detailed `PLAN.md` covering all six phases with explicit file lists and build order, then told Claude to execute it. The entire scaffold — models, spatial helpers, parser with initial patterns, solver, browser automation, orchestrator, and 58 tests — was built in one pass.
+
+### Phase 2: DOM Discovery
+
+The initial scaffold used placeholder DOM selectors that were entirely wrong. I had Claude run a discovery script against the live site to dump the actual DOM structure. The real selectors turned out to be straightforward:
+
+```python
+CARD_CONTAINER = ".card-container"
+CARD = ".card"
+CARD_COORD = "p.coord"       # text like "A1"
+CARD_NAME = "h3.name"        # "alice"
+CARD_PROFESSION = "p.profession"
+HINT_TEXT = "p.hint"          # clue text on flipped cards
+```
+
+One gotcha: I'd named my selectors file `selectors.py`, which shadowed Python's stdlib `selectors` module. Playwright's asyncio imports broke with a cryptic `AttributeError: module 'selectors' has no attribute 'SelectSelector'`. Renamed to `dom_selectors.py`.
+
+### Phase 3: The Iterative Solve Loop
+
+This was the most interesting part. I told Claude to "run the solver against today's puzzle with a browser I can see" and watched it go.
+
+The solver would run, hit an unrecognized clue pattern, stop. Claude would read the error, add the regex pattern and Z3 constraint factory, and re-run. Each iteration extended the solver's vocabulary. Here's the progression:
+
+| Iteration | Stuck On | Pattern Added |
+|-----------|----------|---------------|
+| 1-2 | "Both criminals below Diane are connected" | Directional connectivity with contiguity constraint |
+| 3 | "John is one of Erwin's 3 innocent neighbors" | Compound: X has status + Y has N such neighbors |
+| 4 | "Exactly 2 of the 5 innocents neighboring me are below Flora" | Pronoun resolution + compound neighbor-subset-directional |
+| 5 | "There's an odd number of innocents neighboring Celia" | Parity constraint on neighbor count |
+| 6 | "Exactly 1 innocent in row&nbsp;1 is neighboring Erwin" | Non-breaking space normalization + row-filtered neighbor intersection |
+| 7 | "Row 5 is the only row with exactly 3 innocents" | Row/column uniqueness |
+| 8 | "There's an equal number of innocents in rows 1 and 2" | Alternate phrasing for row equality |
+| 9 | "There are 9 innocents on the edges" | Edge cell helper + edge count |
+| 10 | "Column D has more criminals than any other column" | Superlative comparison |
+| 11 | "Each column has at least one criminal" | Minimum-per-group constraint |
+
+After adding all 11 patterns, the solver completed the full puzzle: **20/20 suspects in 14 iterations with 0 errors**.
+
+## The Hard Parts
+
+### Non-Breaking Spaces
+
+The game uses `\xa0` (non-breaking space) between "row" and the row number in clue text. This caused silent regex mismatches — the pattern `row\s+(\d)` doesn't match `row\xa01` because `\xa0` isn't a standard whitespace character in many regex flavors. The fix was a normalization step before pattern matching:
+
+```python
+text = re.sub(r'[\xa0\u200b\u00a0]', ' ', text)
+```
+
+### Pronoun Resolution
+
+Some clues use first person: "Exactly 2 of the 5 innocents neighboring **me** are below Flora". The solver needs to know who "me" is — it's the suspect whose card the clue appears on. A pronoun resolution pass before pattern matching handles this:
+
+```python
+text = re.sub(r'\bneighboring me\b', f'neighboring {source_name}', text)
+text = re.sub(r'\bmy\b', f"{source_name}'s", text)
+```
+
+### Connectivity Constraints
+
+"All criminals are connected" is the hardest constraint to encode in Z3. The approach uses auxiliary integer distance-from-root variables: exactly one criminal is the root (distance 0), and every other criminal must have an orthogonally adjacent criminal neighbor with distance exactly one less. This forces a spanning tree, which implies connectivity.
+
+For directional connectivity ("Both criminals below Diane are connected"), the constraint is simpler — cells in a line are connected if and only if they're contiguous (no innocent gaps between criminal cells).
+
+## Results
+
+The solver completed today's Easy puzzle (Feb 16, 2026) fully automatically:
+
+- **7 criminals, 13 innocents**
+- **14 solver iterations** (read clues → find forced → mark)
+- **13 clue patterns** parsed successfully
+- **0 error modals** — every deduction was logically sound
+
+The entire project — from plan to working solver — was built in a single Claude Code session. The iterative pattern-adding loop is what made it practical: rather than trying to enumerate every possible clue format upfront, the solver discovers what it's missing by running against real puzzles.
+
+## What's Next
+
+The solver handles one day's Easy puzzle. To make it robust across difficulties and days, it would need:
+
+- More clue patterns (harder puzzles likely introduce new phrasings)
+- Better error recovery (retry on timeout, handle slow page loads)
+- A clue pattern replay system for testing without a live browser
+- Support for Medium and Hard difficulty levels
