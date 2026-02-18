@@ -1,0 +1,143 @@
+---
+title: "Building a Dota 2 Invoker Voice Pack for Peon-Ping"
+description: "Creating a CESP v1.0 OpenPeon sound pack featuring Invoker from Dota 2 — from wiki scraping to audio normalization to registry PR — in a single Claude Code session."
+pubDate: 2026-02-17
+status: complete
+difficulty: intermediate
+ambitionRating: 2
+repoUrl: "https://github.com/bwarren2/peonpack-invoker"
+techStack: ["Bash", "ffmpeg", "Python", "MediaWiki API"]
+projectType: "automation"
+claudeTechniques: ["plan-mode", "iterative-refinement"]
+tags: ["dota2", "audio", "peon-ping", "openpeon", "voice-pack"]
+promptSnippets:
+  - prompt: "Create a new CESP v1.0 voice pack for the Dota 2 hero Invoker"
+    context: "Initial request with links to the OpenPeon spec, creation guide, and Invoker wiki page"
+    effectiveness: high
+    notes: "Claude explored the reference pack, wiki, and spec, then drafted a complete plan with voice line mappings."
+  - prompt: "Implement the following plan: [full voice line mapping table with 24 sounds across 7 categories]"
+    context: "After plan-mode produced a detailed spec with source filenames, target filenames, and categories"
+    effectiveness: high
+    notes: "Claude executed the entire pipeline — wiki scraping, downloading, ffmpeg processing, manifest generation, verification — without intervention."
+costTracking:
+  inputTokens: 4543
+  outputTokens: 15769
+  cacheReadTokens: 14732464
+  cacheCreationTokens: 688189
+  totalCost: 36.25
+  sessions: 2
+lessonsLearned:
+  whatWorked:
+    - "Plan mode mapped all 24 voice lines to categories before any downloading — no wasted work"
+    - "Using the MediaWiki API to resolve CDN URLs was reliable and scriptable"
+    - "The verify-everything-at-the-end approach caught nothing because the pipeline was right the first time"
+    - "The existing dota2_axe pack served as a perfect template for the manifest format"
+  whatDidnt:
+    - "The wiki page was too long for a single WebFetch — had to fall back to raw wikitext API to find death/deny lines"
+    - "Fandom CDN serves WebP regardless of the .png extension — needed sips conversion for the README image"
+    - "First ASCII art attempt was generic and unexpressive — needed iteration before switching to real art"
+  whatIdDoDifferently:
+    - "Start with the raw wikitext API instead of scraping the rendered HTML page"
+    - "Download the hero portrait image upfront during planning rather than as a README afterthought"
+---
+
+## The Project
+
+[Peon-ping](https://github.com/PeonPing/peon-ping) plays game character voice lines as sound notifications in Claude Code — a sound when a task completes, when input is required, when you're spamming prompts too fast. It uses the [CESP v1.0](https://github.com/PeonPing/openpeon) open standard for sound packs.
+
+I wanted an Invoker pack. Invoker is the arrogant, ageless magus from Dota 2 who has memorized more spells than most will ever learn. His voice lines are dripping with condescension — perfect for a coding assistant telling you it's done, or that you've made an error, or that you're being tedious.
+
+## The Pipeline
+
+The full pipeline from "I want an Invoker pack" to "it's in the registry" ran across two Claude Code sessions totaling about an hour.
+
+### Session 1: Planning (45 minutes)
+
+I gave Claude three URLs — the OpenPeon creation guide, the CESP spec, and the [Invoker responses wiki page](https://dota2.fandom.com/wiki/Invoker/Responses) — and asked it to plan a voice pack.
+
+Claude explored the reference `dota2_axe` pack to understand the manifest format, scraped the wiki for all of Invoker's voice lines, and drafted a mapping of quotes to CESP categories. I picked my favorites from the options it presented:
+
+- **session.start**: "Invoker!", "Glorious invocation!", "So begins a new age of knowledge."
+- **task.error**: "Did I miscast?", "Words fail me..."
+- **user.spam**: "'Tis tedious.", "This bores me.", "Lamentable."
+- **resource.limit**: "Denied!", "Denied!", "Demised." (three escalating versions)
+
+The plan landed at 24 sounds across 7 categories.
+
+### Session 2: Implementation (22 minutes)
+
+With the plan finalized, implementation was a straight pipeline:
+
+**1. Resolve wiki filenames.** Several lines were marked "(verify)" in the plan — quotes where I knew the text but not the exact game filename. Claude queried the MediaWiki raw wikitext API to resolve all of them:
+
+```
+"I'm betwixt myself." → Vo_invoker_invo_illus_02.mp3  (illusion line, not move)
+"Demised."            → Vo_invoker_invo_deny_07.mp3
+"An end to ages..."   → Vo_invoker_invo_death_04.mp3
+```
+
+**2. Download via MediaWiki API.** For each of the 23 unique source files (one "Denied!" is shared between two categories), Claude resolved the CDN URL through the wiki's `imageinfo` API and downloaded the raw MP3.
+
+**3. Normalize with ffmpeg.** Every file was processed to match the reference pack spec:
+
+```bash
+ffmpeg -i input.mp3 -ac 1 -ar 44100 -b:a 128k \
+  -af "loudnorm=I=-16:TP=-1.5:LRA=11" output.mp3
+```
+
+Mono, 44.1kHz, 128kbps, loudness-normalized. The entire pack came out to 0.79 MB.
+
+**4. Generate manifest.** SHA-256 checksums for all 24 files, assembled into `openpeon.json` following the `dota2_axe` template exactly.
+
+**5. Verify.** JSON validation, file existence, checksum integrity, and audio spec checks (mono, 44.1kHz, 128kbps, under 1MB per file, 0.5–5s duration). Everything passed.
+
+### Testing and Publishing
+
+After the pack was built, I tested it live:
+
+```
+> play one from each category
+
+session.start:    "So begins a new age of knowledge."
+task.acknowledge: "I proceed."
+task.complete:    "Witness true sorcery!"
+task.error:       "Did I miscast?"
+input.required:   "I'm betwixt myself."
+resource.limit:   "Demised."
+user.spam:        "'Tis tedious."
+```
+
+Then committed, pushed to GitHub, and registered in the [OpenPeon registry](https://github.com/PeonPing/registry) via PR. The PR passed CI and was merged, making the pack installable by anyone:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/PeonPing/peon-ping/main/scripts/pack-download.sh \
+  | bash -s -- --dir="$HOME/.claude/hooks/peon-ping" --packs="dota2_invoker"
+```
+
+## Cost Breakdown
+
+Two sessions on Claude Opus 4.6, totaling ~67 minutes of wall-clock time.
+
+| Component | Tokens | Cost | Share |
+|-----------|--------|------|-------|
+| Cache reads | 14.7M | $22.10 | 61% |
+| Cache creation | 688K | $12.90 | 36% |
+| Output | 16K | $1.18 | 3% |
+| Input (non-cache) | 5K | $0.07 | &lt;1% |
+| **Total** | **15.4M** | **$36.25** | |
+
+The cost is dominated by cache operations (97%), which is typical for Claude Code — the growing context window gets re-sent on each turn. The actual novel input and output tokens were modest (20K combined), but the context carries the full conversation history.
+
+For what it produced — a complete, tested, published sound pack with 24 audio files, a manifest, a README, and a registry PR — $36 and an hour felt reasonable. The alternative was an afternoon of manual wiki browsing, right-click-save-as, ffmpeg incantations, and JSON editing.
+
+## The Voice Lines
+
+| Category | Lines |
+|----------|-------|
+| **session.start** (5) | "Invoker!" · "Thus I invoke myself!" · "So begins a new age of knowledge." · "Knowledge is power!" · "Glorious invocation!" |
+| **task.acknowledge** (4) | "Mindfully." · "I am committed." · "I proceed." · "Thither I go." |
+| **task.complete** (3) | "Behold!" · "One of my favorites." · "Witness true sorcery!" |
+| **task.error** (3) | "Words fail me..." · "Did I miscast?" · "An end to ages of learning." |
+| **input.required** (3) | "Over yon?" · "Denied!" · "I'm betwixt myself." |
+| **resource.limit** (3) | "Denied!" · "Denied!" · "Demised." |
+| **user.spam** (3) | "'Tis tedious." · "This bores me." · "Lamentable." |
