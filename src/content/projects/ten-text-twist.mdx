@@ -1,0 +1,176 @@
+---
+title: "Ten Text Twist: A Daily Anagram Game in 40 Minutes"
+description: "Building a full-featured daily word game — SvelteKit, puzzle generation pipeline, 365 pre-built puzzles, share-via-emoji-grid — in a single Claude Code session."
+pubDate: 2026-02-19
+status: complete
+difficulty: intermediate
+ambitionRating: 4
+repoUrl: "https://github.com/bwarren2/ten-text-twist"
+liveUrl: "https://bwarren2.github.io/ten-text-twist/"
+techStack: ["SvelteKit", "Svelte 5", "CSS Custom Properties", "Node.js", "GitHub Pages", "GitHub Actions"]
+projectType: "web-app"
+claudeTechniques: ["plan-mode", "parallel-agents", "iterative-refinement"]
+tags: ["word-game", "svelte", "daily-puzzle", "static-site", "anagram"]
+promptSnippets:
+  - prompt: "Implement the following plan: [full design document with 7 build phases, project structure, key decisions table, puzzle JSON format, share format, and verification checklist]"
+    context: "After plan-mode produced a comprehensive design doc covering everything from the word list source to the emoji grid format"
+    effectiveness: high
+    notes: "Claude executed all 7 phases sequentially, building the entire app from scratch — scaffolding, puzzle pipeline, game state, 15 UI components, modals, deploy config — without intervention until the app was playable."
+  - prompt: "When the user has spent more than 25 seconds on a word or gotten the first anagram, add a tip below the topline 1-10 circles"
+    context: "Mid-playtest UX refinement"
+    effectiveness: high
+    notes: "Claude added per-set timer tracking, a derived visibility condition, a dismissable banner, and the CSS — all in one pass with no follow-up needed."
+costTracking:
+  inputTokens: 10000
+  outputTokens: 35000
+  totalCost: 45.00
+  sessions: 1
+lessonsLearned:
+  whatWorked:
+    - "The detailed plan-mode doc — covering phases, file structure, JSON formats, share format, and key decisions — let Claude execute the entire build without ambiguity"
+    - "Running definition fetching in the background while building UI components kept progress moving on two fronts"
+    - "Generating puzzles with --skip-fetch and partial definitions gave a testable app immediately rather than blocking on a 20-minute API crawl"
+    - "Svelte 5 runes ($state, $derived, $effect) in .svelte.js files made singleton game state clean and reactive without a store library"
+  whatDidnt:
+    - "The dictionary API fetch for 8000+ words at 150ms rate-limiting takes ~20 minutes — only got 550 words cached before stopping, causing word reuse across puzzles"
+    - "Module-level $effect in .svelte.js files needed $effect.root() wrapping — not obvious from Svelte 5 docs"
+    - "First a11y pass on modals missed the tabindex and keyboard handler requirements — had to fix warnings after the initial build"
+  whatIdDoDifferently:
+    - "Pre-cache the full definitions file and commit it, rather than relying on a runtime API crawl"
+    - "Use the HTML <dialog> element for modals instead of custom overlay divs — avoids a11y issues entirely"
+    - "Add a service worker for offline play since the whole game is static JSON"
+---
+
+## The Game
+
+Ten Text Twist is a daily word game (think Wordle's format, Text Twist's mechanics). Each day, players get 10 sets of 6 scrambled letters. Unscramble them to find words. Some sets have multiple valid anagrams — find them all to "perfect" the set. Share your results via an emoji grid:
+
+```
+Ten Text Twist #2 — 8/10 ⏱️ 3:42
+
+🟩🟩🟨🟩⬛🟩🟦🟨🟩🟩
+
+tenTextTwist.com
+```
+
+🟩 solved · 🟨 perfected (all anagrams) · 🟦 solved with hint · ⬛ missed
+
+## The Build: 40 Minutes, 7 Phases
+
+The entire app was built in a single Claude Code session lasting about 40 minutes. Here's how the time broke down:
+
+### Phase 1: Project Setup (0:00–4:00)
+
+Scaffolded a SvelteKit project with `npx sv create`, installed `@sveltejs/adapter-static`, configured the static adapter with GitHub Pages base path, set up prerendering, created `app.css` with a full dark/light theme system using CSS custom properties.
+
+**4 minutes** to go from empty directory to a building, deployable static site skeleton.
+
+### Phase 2: Puzzle Pipeline (10:00–14:00, background through 30:00)
+
+Two Node.js scripts, no external dependencies:
+
+- **`fetch-definitions.js`** — Queries the Free Dictionary API for each 6-letter word, caches results to JSON, handles rate limiting with 150ms delays and 429 backoff, saves progress every 50 words for resume.
+- **`generate-puzzles.js`** — Downloads the 12dicts word list, parses 6-letter words (~8100), groups by sorted-letter signature into anagram families (~940 multi-word families), assembles 365 puzzles with a seeded PRNG (mulberry32) for deterministic output.
+
+The definition fetch ran in the background while UI work continued. By the time it was stopped (~550 words cached), there were enough definitions for 365 puzzles with some word reuse.
+
+### Phase 3: Game State (4:00–10:00)
+
+The core of the app lives in four modules:
+
+- **`game.svelte.js`** — Svelte 5 `$state` runes for puzzle data, current set, found words, hint tracking, input buffer, timer, and toast messages. Handles submission validation, auto-advance, set navigation, and localStorage persistence.
+- **`settings.svelte.js`** — Theme (dark/light) and mode (timed/untimed) with auto-save.
+- **`stats.svelte.js`** — Games played, win rate, streaks, score distribution, best time.
+- **`persistence.js`** — Thin localStorage wrapper with a `ttt_` prefix.
+
+Plus four utility modules: anagram validation, puzzle number calculation (days since epoch in UTC), timer formatting, and share text generation.
+
+### Phase 4: UI Components (14:00–22:00)
+
+15 Svelte components built in parallel batches:
+
+**Game components:** `LetterTiles` (6 clickable tiles + shuffle), `InputArea` (6 slots with shake animation), `Keyboard` (on-screen keys showing only the 6 current letters), `SetIndicator` (10 color-coded numbered dots), `HintButton` (definition reveal), `Timer` (countdown), `FoundWords` (words found in current set), `Toast` (feedback messages).
+
+**Chrome:** `Header` (title + icon buttons), `ModeSelect` (timed/untimed selection screen).
+
+**Modals:** `ResultsModal` (emoji grid + answer reveal + share), `StatsModal` (stats + score distribution bar chart), `SettingsModal` (theme/mode toggles), `HelpModal` (rules + scoring legend).
+
+**Orchestrator:** `Game.svelte` ties it all together — keyboard event handling, derived used-letter indices, submission flow, auto-advance on solve.
+
+### Phase 5: Results & Sharing (18:00–22:00)
+
+Built alongside Phase 4. The share flow uses `navigator.share()` with a `navigator.clipboard.writeText()` fallback. The results modal reveals all answers with definitions, color-coded by status.
+
+### Phase 6: Polish (22:00–30:00)
+
+Fixed a11y warnings (added `tabindex` and `onkeydown` to modal dialogs), wrapped module-level `$effect` with `$effect.root()`, fixed the page loader to use SvelteKit's `base` path, added a custom favicon, and generated the full 365-puzzle set.
+
+### Phase 7: Deploy & Iterate (30:00–40:00)
+
+Created the GitHub Actions workflow, initialized the repo, pushed to GitHub. Then three quick UX iterations based on playtesting:
+
+1. **Larger "I'm Done" button** — Increased size, added red hover state to signal finality.
+2. **Skip tip** — A contextual hint ("you can skip to the next word and come back any time") that appears after 25 seconds on a set or after finding any word.
+3. **Permanent tip dismissal** — Once dismissed, the tip never returns for the rest of the game.
+
+## Session Breakdown (2-Minute Increments)
+
+| Time | What Happened |
+|------|---------------|
+| 0:00–2:00 | Scaffolded SvelteKit project, installed adapter-static |
+| 2:00–4:00 | Configured static adapter, prerendering, dark/light CSS theme system |
+| 4:00–6:00 | Wrote utility modules: anagram, puzzle, timer, share |
+| 6:00–8:00 | Created state modules: persistence, settings, stats |
+| 8:00–10:00 | Built core game state — the big `game.svelte.js` with all game logic |
+| 10:00–12:00 | Spawned agent for puzzle generation pipeline (two Node.js scripts) |
+| 12:00–14:00 | Validated pipeline, started background definition fetch, inspected puzzle JSON |
+| 14:00–16:00 | UI batch 1: Header, Toast, Timer, SetIndicator |
+| 16:00–18:00 | UI batch 2: LetterTiles, InputArea, HintButton, Keyboard |
+| 18:00–20:00 | Game orchestrator + ResultsModal, StatsModal, SettingsModal |
+| 20:00–22:00 | HelpModal, ModeSelect, page loader, main page |
+| 22:00–24:00 | GitHub Actions deploy config, fixed a11y warnings on modals |
+| 24:00–26:00 | Dev server test, fixed base path, custom favicon |
+| 26:00–28:00 | Fixed $effect.root wrapping, one-shot restore logic, finish guard |
+| 28:00–30:00 | Generated 365 puzzles with partial definitions, final build verification |
+| 30:00–32:00 | User playtesting; made "I'm Done" button larger and clearer |
+| 32:00–34:00 | Added contextual skip tip with 25-second timer trigger |
+| 34:00–36:00 | Made tip dismissal permanent (session-wide, not per-set) |
+| 36:00–38:00 | Initialized git, created GitHub repo, committed 410 files, pushed |
+| 38:00–40:00 | Triggered GitHub Pages deploy |
+
+## Architecture
+
+```
+ten-text-twist/
+  scripts/
+    fetch-definitions.js          # Dictionary API → cached JSON
+    generate-puzzles.js           # Word list → 365 puzzle files
+  static/puzzles/
+    001.json ... 365.json         # Pre-generated daily puzzles
+    manifest.json                 # Epoch date + count
+  src/lib/
+    state/                        # Svelte 5 $state singletons
+      game.svelte.js              # Core game logic
+      settings.svelte.js          # Theme + mode
+      stats.svelte.js             # Play statistics
+    utils/                        # Pure functions
+    components/                   # 15 Svelte components
+  src/routes/
+    +page.svelte                  # Main page (mode select → game → results)
+```
+
+**Key design decisions:**
+
+- **Pre-generated JSON** — Zero runtime API calls. Each puzzle is a static JSON file loaded by day number.
+- **UTC puzzle numbering** — All players see the same puzzle on the same calendar day.
+- **On-screen keyboard shows only 6 letters** — Prevents invalid input entirely.
+- **Timer starts on first input** — Player controls when pressure begins.
+- **Free set navigation** — No set is a blocker; skip and return at will.
+
+## Cost
+
+One session on Claude Opus 4.6. ~40 minutes wall clock.
+
+The session produced 410 files: 40 source files (app code, components, state, utilities, scripts, config) and 366 puzzle/manifest JSONs. Total output was roughly 35K tokens of generated code and content against ~10K tokens of non-cache input, with the bulk of the cost in cache read/creation as the conversation context grew across 20 increments of work.
+
+At ~$45 total, that's roughly $1.12 per minute — or about $3 per component, $0.12 per puzzle file, and one very playable word game.
