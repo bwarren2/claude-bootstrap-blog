@@ -2,6 +2,7 @@
 title: "Ten Text Twist: A Daily Anagram Game in 40 Minutes"
 description: "Building a full-featured daily word game — SvelteKit, puzzle generation pipeline, 365 pre-built puzzles, share-via-emoji-grid — in a single Claude Code session."
 pubDate: 2026-02-19
+updatedDate: 2026-02-22
 status: complete
 difficulty: intermediate
 ambitionRating: 4
@@ -20,11 +21,15 @@ promptSnippets:
     context: "Mid-playtest UX refinement"
     effectiveness: high
     notes: "Claude added per-set timer tracking, a derived visibility condition, a dismissable banner, and the CSS — all in one pass with no follow-up needed."
+  - prompt: "[Bug report describing duplicate letter tile behavior, root cause analysis, and a detailed fix plan specifying changes to game.svelte.js and Game.svelte]"
+    context: "Plan-mode bug fix three days after launch — the wrong tile was disabling when tapping duplicate letters"
+    effectiveness: high
+    notes: "Claude diagnosed the root cause (reverse-computing tile indices from letter values via find()), designed the fix in plan mode, and implemented it in one pass across two files with no follow-up."
 costTracking:
   inputTokens: 10000
   outputTokens: 35000
   totalCost: 45.00
-  sessions: 1
+  sessions: 2
 lessonsLearned:
   whatWorked:
     - "The detailed plan-mode doc — covering phases, file structure, JSON formats, share format, and key decisions — let Claude execute the entire build without ambiguity"
@@ -35,6 +40,8 @@ lessonsLearned:
     - "The dictionary API fetch for 8000+ words at 150ms rate-limiting takes ~20 minutes — only got 550 words cached before stopping, causing word reuse across puzzles"
     - "Module-level $effect in .svelte.js files needed $effect.root() wrapping — not obvious from Svelte 5 docs"
     - "First a11y pass on modals missed the tabindex and keyboard handler requirements — had to fix warnings after the initial build"
+    - "Reverse-computing tile indices from letter values (using find()) broke duplicate letters — the first match always won regardless of which tile the player tapped"
+    - "Share link was missing https:// prefix, so Discord and other platforms didn't auto-linkify it"
   whatIdDoDifferently:
     - "Pre-cache the full definitions file and commit it, rather than relying on a runtime API crawl"
     - "Use the HTML <dialog> element for modals instead of custom overlay divs — avoids a11y issues entirely"
@@ -174,3 +181,78 @@ One session on Claude Opus 4.6. ~40 minutes wall clock.
 The session produced 410 files: 40 source files (app code, components, state, utilities, scripts, config) and 366 puzzle/manifest JSONs. Total output was roughly 35K tokens of generated code and content against ~10K tokens of non-cache input, with the bulk of the cost in cache read/creation as the conversation context grew across 20 increments of work.
 
 At ~$45 total, that's roughly $1.12 per minute — or about $3 per component, $0.12 per puzzle file, and one very playable word game.
+
+## Post-Launch Fixes (Day 3)
+
+Three days after launch, a round of playtesting and sharing surfaced five issues — all fixed in a single session.
+
+### The Duplicate Letter Bug
+
+The most interesting bug: when a word has duplicate letters (e.g., two E's at positions 2 and 5), tapping the E at position 5 would disable the E at position 2 instead. The wrong tile grayed out.
+
+**Root cause:** The original code only tracked which *letters* were in the input buffer, not which *tiles* were selected. When `Game.svelte` needed to figure out which display tiles to disable, it reverse-computed indices from letter values using `find()`:
+
+```javascript
+// OLD: Game.svelte — always picks the first matching letter
+const usedIndices = $derived.by(() => {
+    const indices = [];
+    const available = game.displayLetters.map((l, i) => ({ letter: l, index: i }));
+    for (const inputLetter of game.input) {
+        const found = available.find(a => a.letter === inputLetter && !indices.includes(a.index));
+        if (found) indices.push(found.index);
+    }
+    return indices;
+});
+```
+
+For unique letters this works fine. But `find()` always returns the first match, so tapping the *second* E still disables the *first* E. The information about which tile was actually tapped was lost the moment `addLetter()` received just a letter value.
+
+**The fix:** Track tile indices directly in game state, parallel to the input buffer. `addLetter(letter, sourceIndex)` now accepts an optional tile index — when provided (tile tap), it uses that exact index; when omitted (physical keyboard), it falls back to first-available. The component just reads the authoritative index list instead of reverse-computing it:
+
+```javascript
+// NEW: game.svelte.js — tracks exactly which tiles were selected
+addLetter(letter, sourceIndex) {
+    if (sourceIndex !== undefined && displayLetters[sourceIndex] === upperLetter
+        && !inputIndices.includes(sourceIndex)) {
+        chosenIndex = sourceIndex;  // use the exact tile that was tapped
+    } else {
+        chosenIndex = displayLetters.findIndex((l, i) =>
+            l === upperLetter && !inputIndices.includes(i));  // keyboard fallback
+    }
+    input = [...input, upperLetter];
+    inputIndices = [...inputIndices, chosenIndex];
+}
+```
+
+```javascript
+// NEW: Game.svelte — just read the authoritative list
+const usedIndices = $derived(game.inputIndices);
+```
+
+Two files changed, and both `removeLetter()` and `removeLetterAt()` keep the index array in sync so backspace and slot-tapping re-enable the correct tile.
+
+### Mobile Double-Tap Zoom
+
+On mobile Safari and Chrome, rapidly tapping letter tiles triggered the browser's double-tap-to-zoom gesture instead of registering two quick letter inputs. One line in `app.css` fixed it:
+
+```css
+*, *::before, *::after {
+    touch-action: manipulation;
+}
+```
+
+`touch-action: manipulation` tells the browser to handle touch events for panning and pinch-zoom only — disabling the 300ms double-tap-to-zoom delay entirely. This is safe for a game UI where double-tap zoom is never the intended interaction.
+
+### Share Link Fixes
+
+Three small fixes to the share text, all in `share.js`:
+
+1. **GitHub Pages URL** — The share link was pointing to the wrong domain. Fixed to `bwarren2.github.io/ten-text-twist`.
+2. **Compact format** — Removed blank lines between the header, emoji grid, and link so the share text is tighter when pasted into chat.
+3. **HTTPS prefix** — The link was `bwarren2.github.io/...` without `https://`, so Discord and other platforms didn't auto-detect it as a clickable URL. Adding the scheme prefix fixed auto-linkification everywhere.
+
+### Pattern: Playtesting Finds What Code Review Doesn't
+
+All five issues were invisible in the code. The duplicate letter bug passed every mental code review — the `find()` logic *looks* correct. The double-tap zoom only appears on real phone hardware. The share link only breaks when you paste it into Discord and notice it's not clickable.
+
+The lesson: for interactive apps, there's no substitute for actually playing the game on real devices and sharing the results to real platforms. Each bug was found in under a minute of real usage and fixed in under a minute of Claude Code time.
